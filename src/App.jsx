@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Activity, AudioLines, Bot, Check, CircleHelp, Clock3, Heart,
   Keyboard, Mic, MicOff, Send, Settings2, Sparkles, Trash2, Volume2,
