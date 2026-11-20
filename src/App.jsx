@@ -1,142 +1,111 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Activity, AudioLines, Bot, Check, CircleHelp, Clock3, Heart,
-  Keyboard, Mic, MicOff, Send, Settings2, Sparkles, Trash2, Volume2,
-  VolumeX, Waves, X
-} from "lucide-react";
-
-const initialMessages = [
-  {
-    id: 1,
-    role: "assistant",
-    text: "¡Hola! 👋 Soy Jhoel, tu asistente virtual. Estoy lista para conversar contigo. ¿Qué te gustaría hacer hoy?"
-  }
-];
+import { Activity, AudioLines, Heart, Mic, MicOff, Settings2, Sparkles, Volume2, Waves, X } from "lucide-react";
 
 export default function App() {
-  const [messages, setMessages] = useState(initialMessages);
-  const [isLoading, setIsLoading] = useState(false);
-  const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [notice, setNotice] = useState("Demo visual · IA aún no conectada");
+  const [thinking, setThinking] = useState(false);
+  const [notice, setNotice] = useState("Presiona el micrófono y háblame");
+  const [heardText, setHeardText] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [voiceName, setVoiceName] = useState("");
+  const [availableVoices, setAvailableVoices] = useState([]);
   const recognitionRef = useRef(null);
-  const bottomRef = useRef(null);
+  const conversationRef = useRef([]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
+    const loadVoices = () => {
+      if (!("speechSynthesis" in window)) return;
+      setAvailableVoices(window.speechSynthesis.getVoices().filter(v => v.lang?.toLowerCase().startsWith("es")));
+    };
+    loadVoices();
+    window.speechSynthesis?.addEventListener?.("voiceschanged", loadVoices);
     return () => {
       recognitionRef.current?.stop?.();
-      window.speechSynthesis?.cancel();
+      window.speechSynthesis?.cancel?.();
+      window.speechSynthesis?.removeEventListener?.("voiceschanged", loadVoices);
     };
   }, []);
 
   function speak(text) {
-    if (muted || !("speechSynthesis" in window)) return;
+    if (!("speechSynthesis" in window)) {
+      setNotice("Tu navegador no tiene reproducción de voz disponible.");
+      return;
+    }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "es-PE";
-    utterance.rate = 1;
-    utterance.pitch = 1.06;
-    const voices = window.speechSynthesis.getVoices();
-    const selected = voices.find(v => v.name === voiceName)
-      || voices.find(v => v.lang?.toLowerCase().startsWith("es") && /female|woman|sabina|helena|paulina|monica|lucia/i.test(v.name))
-      || voices.find(v => v.lang?.toLowerCase().startsWith("es"));
+    utterance.rate = 0.96;
+    utterance.pitch = 1.08;
+    const selected = availableVoices.find(v => v.name === voiceName)
+      || availableVoices.find(v => /female|woman|sabina|helena|paulina|monica|lucia|sofia/i.test(v.name))
+      || availableVoices.find(v => v.lang?.toLowerCase().startsWith("es"));
     if (selected) utterance.voice = selected;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
+    utterance.onstart = () => { setSpeaking(true); setNotice("Jhoel te está respondiendo…"); };
+    utterance.onend = () => { setSpeaking(false); setNotice("Cuando quieras, puedes volver a hablar"); };
+    utterance.onerror = () => { setSpeaking(false); setNotice("No pude reproducir la voz. Revisa el audio."); };
     window.speechSynthesis.speak(utterance);
   }
 
-  async function sendMessage(value = input) {
-    const text = value.trim();
-    if (!text || isLoading) return;
-
-    const userMessage = { id: Date.now(), role: "user", text };
-    const conversation = [
-      ...messages.map(message => ({
-        role: message.role,
-        content: message.text
-      })),
-      { role: "user", content: text }
-    ];
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-    setNotice("Jhoel está pensando...");
-
+  async function askJhoel(transcript) {
+    setThinking(true);
+    setNotice("Estoy pensando en tu respuesta…");
+    const messages = [...conversationRef.current, { role: "user", content: transcript }];
     try {
-      const response = await fetch("http://localhost:3001/api/chat", {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
+      const response = await fetch(apiUrl + "/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: conversation })
+        body: JSON.stringify({ messages })
       });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "No se pudo obtener una respuesta.");
-      }
-
-      const reply = {
-        id: Date.now() + 1,
-        role: "assistant",
-        text: data.reply
-      };
-      setMessages(prev => [...prev, reply]);
-      setNotice("Jhoel está lista para conversar");
-      speak(reply.text);
+      if (!response.ok) throw new Error(data.error || "No se pudo obtener una respuesta de la IA.");
+      conversationRef.current = [...messages, { role: "assistant", content: data.reply }].slice(-20);
+      speak(data.reply);
     } catch (error) {
-      console.error(error);
-      setNotice("No se pudo conectar con la IA");
-      setMessages(prev => [...prev, {
-        id: Date.now() + 2,
-        role: "assistant",
-        text: `Lo siento, tuve un problema de conexión: ${error.message}`
-      }]);
+      console.error("Error al consultar Jhoel:", error);
+      setNotice(error.message || "No pude conectarme con el modelo de IA.");
     } finally {
-      setIsLoading(false);
+      setThinking(false);
     }
   }
 
   function toggleListening() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      setNotice("Respuesta detenida. Puedes volver a hablar.");
+      return;
+    }
     if (listening) {
       recognitionRef.current?.stop();
       setListening(false);
+      setNotice("Escucha detenida");
       return;
     }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setNotice("Tu navegador no permite reconocimiento de voz. Prueba Chrome o Edge.");
+      setNotice("Tu navegador no admite reconocimiento de voz. Usa Chrome o Edge.");
       return;
     }
+    if (thinking) return;
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = "es-PE";
       recognition.interimResults = false;
       recognition.continuous = false;
-      recognition.onstart = () => {
-        setListening(true);
-        setNotice("Te estoy escuchando…");
-      };
-      recognition.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript || "";
+      recognition.onstart = () => { setListening(true); setHeardText(""); setNotice("Te estoy escuchando…"); };
+      recognition.onresult = event => {
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
         setListening(false);
-        setNotice("Mensaje recibido");
-        if (transcript) sendMessage(transcript);
+        if (transcript) {
+          setHeardText(transcript);
+          askJhoel(transcript);
+        } else setNotice("No logré escuchar. Inténtalo otra vez.");
       };
-      recognition.onerror = (event) => {
+      recognition.onerror = event => {
         setListening(false);
-        setNotice(event.error === "not-allowed"
-          ? "Permite el acceso al micrófono en tu navegador."
-          : "No pude escuchar bien. Inténtalo nuevamente.");
+        setNotice(event.error === "not-allowed" ? "Permite el acceso al micrófono en tu navegador." : "No pude escuchar bien. Inténtalo nuevamente.");
       };
       recognition.onend = () => setListening(false);
       recognitionRef.current = recognition;
@@ -147,121 +116,77 @@ export default function App() {
     }
   }
 
-  function clearChat() {
-    setMessages(initialMessages);
-    window.speechSynthesis?.cancel();
+  function resetConversation() {
+    conversationRef.current = [];
+    setHeardText("");
+    window.speechSynthesis?.cancel?.();
     setSpeaking(false);
-    setNotice("Conversación reiniciada");
+    setNotice("Empezamos de nuevo. ¿De qué te gustaría hablar?");
+    setShowSettings(false);
   }
 
-  const availableVoices = typeof window !== "undefined" && "speechSynthesis" in window
-    ? window.speechSynthesis.getVoices().filter(v => v.lang?.toLowerCase().startsWith("es"))
-    : [];
-
   return (
-    <main className="app-shell">
+    <main className="app-shell voice-only">
       <header className="topbar">
         <a className="brand" href="#" aria-label="Jhoel inicio">
           <span className="brand-mark"><AudioLines size={29} /></span>
           <span><strong>Jhoel</strong><small>Tu asistente virtual</small></span>
         </a>
         <div className="top-actions">
-          <span className="online-pill"><i /> En línea</span>
-          <button className="icon-button" onClick={() => setShowSettings(v => !v)} aria-label="Configuración">
-            <Settings2 size={19} />
-          </button>
+          <span className="online-pill"><i /> IA disponible</span>
+          <button className="icon-button" onClick={() => setShowSettings(v => !v)} aria-label="Configuración"><Settings2 size={19} /></button>
         </div>
       </header>
 
       {showSettings && (
         <section className="settings-popover">
-          <div className="settings-title"><strong>Configuración de voz</strong><button onClick={() => setShowSettings(false)}><X size={16}/></button></div>
-          <label htmlFor="voice-select">Voz en español disponible en tu dispositivo</label>
+          <div className="settings-title"><strong>Configuración de voz</strong><button onClick={() => setShowSettings(false)} aria-label="Cerrar"><X size={16}/></button></div>
+          <label htmlFor="voice-select">Voz en español de tu dispositivo</label>
           <select id="voice-select" value={voiceName} onChange={e => setVoiceName(e.target.value)}>
             <option value="">Automática (español)</option>
             {availableVoices.map(v => <option key={v.name} value={v.name}>{v.name} · {v.lang}</option>)}
           </select>
-          <p>Las voces dependen del navegador y del sistema operativo.</p>
+          <p>Las voces disponibles dependen del navegador y del sistema operativo.</p>
+          <button className="reset-voice-button" onClick={resetConversation}>Reiniciar conversación</button>
         </section>
       )}
 
-      <section className="workspace">
+      <section className="workspace voice-workspace">
         <section className="assistant-panel">
           <div className="avatar-stage">
-            <div className={`avatar-glow ${listening ? "is-listening" : ""} ${speaking ? "is-speaking" : ""}`} />
-            <div className="avatar-frame">
-              <img src="/jhoel-avatar.jpg" alt="Avatar de Jhoel, asistente virtual" />
-            </div>
+            <div className={["avatar-glow", listening && "is-listening", speaking && "is-speaking", thinking && "is-thinking"].filter(Boolean).join(" ")} />
+            <div className="avatar-frame"><img src="/jhoel-avatar.jpg" alt="Avatar de Jhoel, asistente virtual" /></div>
             <div className="hello-card">
               <span className="hello-eyebrow"><Sparkles size={14}/> TU ASISTENTE PERSONAL</span>
               <h1>¡Hola! <span>👋</span></h1>
-              <p>Soy Jhoel. Estoy aquí para conversar, ayudarte y acompañarte.</p>
+              <p>Soy Jhoel. Hablemos, estoy aquí para ayudarte.</p>
             </div>
           </div>
 
           <div className="voice-area">
-            <div className={`sound-bars ${listening || speaking ? "active" : ""}`} aria-hidden="true">
+            <div className={["sound-bars", (listening || speaking || thinking) && "active"].filter(Boolean).join(" ")} aria-hidden="true">
               {Array.from({ length: 17 }, (_, i) => <i key={i} style={{ "--i": i }} />)}
             </div>
-            <button className={`talk-button ${listening ? "listening" : ""}`} onClick={toggleListening}>
-              {listening ? <MicOff size={25}/> : <Mic size={25}/>}
+            <button className={["talk-button", listening && "listening", thinking && "thinking"].filter(Boolean).join(" ")} onClick={toggleListening} disabled={thinking} aria-label="Hablar con Jhoel">
+              {listening ? <MicOff size={25}/> : speaking ? <Volume2 size={25}/> : <Mic size={25}/>}
             </button>
-            <div className="talk-label">{listening ? "Te estoy escuchando…" : "Presiona para hablar"}</div>
-            <div className="voice-notice">{notice}</div>
+            <div className="talk-label">{listening ? "Te estoy escuchando…" : thinking ? "Estoy pensando…" : speaking ? "Estoy hablando…" : "Presiona para hablar"}</div>
+            <div className="voice-notice" aria-live="polite">{notice}</div>
           </div>
+
+          {heardText && <div className="heard-preview"><span>TE ESCUCHÉ DECIR</span><p>“{heardText}”</p></div>}
 
           <div className="feature-row">
-            <div><Sparkles size={17}/><span>Conversación<br/>inteligente</span></div>
-            <div><Waves size={18}/><span>Voz natural</span></div>
-            <div><Heart size={17}/><span>Siempre contigo</span></div>
+            <div><Sparkles size={17}/><span>Inteligencia<br/>artificial</span></div>
+            <div><Waves size={18}/><span>Conversación<br/>por voz</span></div>
+            <div><Heart size={17}/><span>Siempre<br/>contigo</span></div>
           </div>
-        </section>
-
-        <section className="chat-panel">
-          <div className="chat-header">
-            <div className="chat-heading"><span className="chat-icon"><Bot size={20}/></span><div><strong>Conversación</strong><small>Habla o escribe con Jhoel</small></div></div>
-            <div className="chat-tools">
-              <button className="icon-button sound-toggle" onClick={() => setMuted(v => !v)} title={muted ? "Activar voz" : "Silenciar voz"}>
-                {muted ? <VolumeX size={17}/> : <Volume2 size={17}/>}
-              </button>
-              <button className="clear-button" onClick={clearChat}><Trash2 size={15}/> <span>Limpiar</span></button>
-            </div>
-          </div>
-
-          <div className="messages" aria-live="polite">
-            {messages.map(message => (
-              <div className={`message-row ${message.role}`} key={message.id}>
-                {message.role === "assistant" && <div className="mini-avatar"><img src="/jhoel-avatar.jpg" alt="Jhoel"/></div>}
-                <div className="message-bubble">
-                  <p>{message.text}</p>
-                  {message.role === "assistant" && (
-                    <button className="speak-message" onClick={() => speak(message.text)} aria-label="Escuchar respuesta"><Volume2 size={14}/> Escuchar</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="message-row assistant">
-                <div className="message-bubble">
-                  <p>Jhoel está pensando...</p>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef}/>
-          </div>
-
-          <form className="composer" onSubmit={e => { e.preventDefault(); sendMessage(); }}>
-            <Keyboard className="composer-keyboard" size={19}/>
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe tu mensaje..." aria-label="Escribe tu mensaje"/>
-            <button type="submit" className="send-button" disabled={!input.trim() || isLoading} aria-label="Enviar mensaje"><Send size={19}/></button>
-          </form>
-          <div className="chat-footnote"><span><Check size={13}/> Demo local</span><span>Tu conversación no se guarda</span></div>
         </section>
       </section>
 
       <footer className="footer">
         <span><Heart size={14} fill="currentColor"/> Jhoel · Siempre contigo</span>
-        <span>Una nueva forma de conversar</span>
+        <span><Activity size={14}/> Conversación privada en esta sesión</span>
       </footer>
     </main>
   );
