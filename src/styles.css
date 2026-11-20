@@ -84,3 +84,49 @@ button{cursor:pointer}
 @keyframes wave{to{transform:scaleY(1.7)}}
 @media(max-width:900px){.app-shell{padding:18px 20px}.workspace{grid-template-columns:1fr;gap:16px}.assistant-panel{min-height:570px}.avatar-stage{height:370px}.avatar-frame{height:355px;width:min(65%,330px)}.avatar-glow{width:min(60%,320px)}.hello-card{right:5%;top:35px}.chat-panel{min-height:500px}.messages{max-height:420px}}
 @media(max-width:560px){.app-shell{padding:12px 12px 14px}.topbar{height:58px}.brand-mark{width:39px;height:39px}.brand strong{font-size:21px}.brand small{font-size:10px}.online-pill{padding:7px 10px;font-size:10px}.top-actions{gap:7px}.workspace{margin-top:7px}.assistant-panel{min-height:490px;padding:5px 4px 13px}.avatar-stage{height:310px}.avatar-frame{height:300px;width:min(72%,280px)}.avatar-glow{width:min(70%,280px)}.hello-card{right:0;top:20px;max-width:148px;padding:11px;border-radius:13px}.hello-eyebrow{font-size:7px;letter-spacing:.7px}.hello-card h1{font-size:21px;margin:7px 0 3px}.hello-card p{font-size:10px}.voice-area{margin-top:-3px}.talk-button{width:70px;height:70px}.talk-label{font-size:12px}.sound-bars{width:190px;top:10px}.feature-row{padding:11px 2px;border-radius:13px}.feature-row div{gap:6px;padding:0 9px;font-size:9px}.feature-row svg{width:15px}.chat-panel{min-height:440px;border-radius:17px}.chat-header{padding:13px}.chat-heading strong{font-size:13px}.chat-heading small{font-size:9px}.chat-icon{width:31px;height:31px}.clear-button{padding:7px}.clear-button span{display:none}.messages{min-height:240px;max-height:45vh;padding:15px 12px;gap:13px}.message-bubble{font-size:11px;padding:10px 11px}.mini-avatar{width:26px;height:26px;flex-basis:26px}.composer{margin:0 10px 8px;padding:7px}.composer input{font-size:11px}.send-button{width:36px;height:36px}.chat-footnote{padding:0 12px 10px;font-size:8px}.footer{font-size:9px}.footer span:last-child{display:none}.settings-popover{right:12px;top:75px;width:min(290px,calc(100vw - 24px))}}
+
+
+/* Experiencia de voz: sin panel ni caja de chat */
+.voice-only .voice-workspace{display:block;min-height:calc(100vh - 170px);margin-top:12px}
+.voice-only .assistant-panel{width:min(100%,820px);min-height:650px;margin:0 auto;padding:8px 18px 22px;justify-content:space-between}
+.voice-only .avatar-stage{height:450px;max-width:760px;margin:0 auto}
+.voice-only .avatar-frame{height:430px;width:min(58%,390px)}
+.voice-only .avatar-glow{width:min(58%,390px)}
+.voice-only .hello-card{right:4%;top:65px;max-width:225px;padding:18px}
+.voice-only .hello-card h1{font-size:29px}
+.voice-only .hello-card p{font-size:13px}
+.voice-only .voice-area{margin-top:-2px;min-height:150px}
+.voice-only .talk-button{width:92px;height:92px}
+.voice-only .talk-button:disabled{opacity:.75;cursor:wait}
+.voice-only .talk-button.thinking{animation:pulse 1.2s infinite}
+.voice-only .talk-label{font-size:14px}
+.voice-only .voice-notice{font-size:11px;min-height:18px}
+.voice-only .feature-row{margin-top:18px}
+.voice-only .heard-preview{width:min(100%,520px);margin:0 auto 15px;text-align:center;padding:12px 18px;border:1px solid rgba(143,151,212,.16);border-radius:13px;background:rgba(19,27,57,.42)}
+.voice-only .heard-preview span{font-size:9px;letter-spacing:1.1px;color:#9f91e7;font-weight:700}
+.voice-only .heard-preview p{margin:5px 0 0;color:#d8daf0;font-size:12px;line-height:1.5}
+.voice-only .reset-voice-button{width:100%;margin-top:12px;padding:9px;border:1px solid rgba(145,155,212,.18);border-radius:9px;background:rgba(116,89,255,.13);color:#dedaff;font-size:11px}
+.voice-only .footer{margin-top:0}
+.avatar-glow.is-thinking{box-shadow:0 0 75px rgba(159,93,255,.45),inset 0 0 55px rgba(159,93,255,.22);animation:pulse 1.8s infinite}
+@media(max-width:900px){
+  .voice-only .assistant-panel{min-height:620px}
+  .voice-only .avatar-stage{height:400px}
+  .voice-only .avatar-frame{height:390px;width:min(65%,350px)}
+  .voice-only .avatar-glow{width:min(65%,350px)}
+}
+@media(max-width:560px){
+  .voice-only .voice-workspace{min-height:calc(100vh - 130px);margin-top:2px}
+  .voice-only .assistant-panel{min-height:570px;padding:0 3px 12px}
+  .voice-only .avatar-stage{height:335px}
+  .voice-only .avatar-frame{height:325px;width:min(72%,285px)}
+  .voice-only .avatar-glow{width:min(72%,285px)}
+  .voice-only .hello-card{right:0;top:18px;max-width:145px;padding:10px}
+  .voice-only .hello-card h1{font-size:21px}
+  .voice-only .hello-card p{font-size:10px}
+  .voice-only .voice-area{min-height:130px}
+  .voice-only .talk-button{width:76px;height:76px}
+  .voice-only .talk-label{font-size:12px}
+  .voice-only .heard-preview{margin:0 auto 10px;padding:10px}
+  .voice-only .feature-row{margin-top:10px}
+  .voice-only .footer{font-size:9px}
+}
