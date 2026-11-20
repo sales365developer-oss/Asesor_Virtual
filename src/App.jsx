@@ -15,6 +15,7 @@ const initialMessages = [
 
 export default function App() {
   const [messages, setMessages] = useState(initialMessages);
+  const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -54,22 +55,55 @@ export default function App() {
     window.speechSynthesis.speak(utterance);
   }
 
-  function demoReply(userText) {
-    const reply = `¡Gracias por contarme! 😊 He recibido tu mensaje: “${userText}”. En esta primera versión estoy en modo demostración. En el siguiente paso conectaremos mi cerebro de inteligencia artificial para que pueda responderte libremente.`;
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1, role: "assistant", text: reply
-      }]);
-      speak(reply);
-    }, 450);
-  }
-
-  function sendMessage(value = input) {
+  async function sendMessage(value = input) {
     const text = value.trim();
-    if (!text) return;
-    setMessages(prev => [...prev, { id: Date.now(), role: "user", text }]);
+    if (!text || isLoading) return;
+
+    const userMessage = { id: Date.now(), role: "user", text };
+    const conversation = [
+      ...messages.map(message => ({
+        role: message.role,
+        content: message.text
+      })),
+      { role: "user", content: text }
+    ];
+
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
-    demoReply(text);
+    setIsLoading(true);
+    setNotice("Jhoel está pensando...");
+
+    try {
+      const response = await fetch("http://localhost:3001/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: conversation })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "No se pudo obtener una respuesta.");
+      }
+
+      const reply = {
+        id: Date.now() + 1,
+        role: "assistant",
+        text: data.reply
+      };
+      setMessages(prev => [...prev, reply]);
+      setNotice("Jhoel está lista para conversar");
+      speak(reply.text);
+    } catch (error) {
+      console.error(error);
+      setNotice("No se pudo conectar con la IA");
+      setMessages(prev => [...prev, {
+        id: Date.now() + 2,
+        role: "assistant",
+        text: `Lo siento, tuve un problema de conexión: ${error.message}`
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function toggleListening() {
@@ -206,13 +240,13 @@ export default function App() {
                 </div>
               </div>
             ))}
-            <div ref={bottomRef}/>
+            {isLoading && (\n              <div className="message-row assistant">\n                <div className="message-bubble"><p>Jhoel está pensando...</p></div>\n              </div>\n            )}\n            <div ref={bottomRef}/>
           </div>
 
           <form className="composer" onSubmit={e => { e.preventDefault(); sendMessage(); }}>
             <Keyboard className="composer-keyboard" size={19}/>
             <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe tu mensaje..." aria-label="Escribe tu mensaje"/>
-            <button type="submit" className="send-button" disabled={!input.trim()} aria-label="Enviar mensaje"><Send size={19}/></button>
+            <button type="submit" className="send-button" disabled={!input.trim() || isLoading} aria-label="Enviar mensaje"><Send size={19}/></button>
           </form>
           <div className="chat-footnote"><span><Check size={13}/> Demo local</span><span>Tu conversación no se guarda</span></div>
         </section>
