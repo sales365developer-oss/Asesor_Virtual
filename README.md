@@ -34,3 +34,39 @@ Ejecuta `npm run dev -- --host 0.0.0.0` y abre en el celular `http://IP-DE-TU-PC
 
 ## Siguiente etapa
 Conectar el backend a un proveedor LLM (por ejemplo Groq) sin exponer la API key en el navegador. Luego añadiremos memoria de conversación y afinaremos la voz/avatar.
+
+
+## Backend de IA con Groq
+
+El chat ahora consulta un backend Node.js/Express. La clave de Groq debe mantenerse en un archivo `.env` local y nunca subirse al repositorio.
+
+1. Crea `.env` en la raíz del proyecto con:
+
+```env
+GROQ_API_KEY=tu_clave_de_groq
+PORT=3001
+FRONTEND_ORIGIN=http://localhost:5173
+# Opcional: GROQ_MODEL=openai/gpt-oss-20b
+```
+
+2. Instala dependencias:
+
+```bash
+npm install
+```
+
+3. Abre una terminal y ejecuta el backend:
+
+```bash
+npm run server
+```
+
+4. En otra terminal inicia Vite:
+
+```bash
+npm run dev
+```
+
+5. Abre `http://localhost:5173`. El backend también ofrece `http://localhost:3001/api/health` para comprobar que está activo.
+
+El modelo predeterminado es `openai/gpt-oss-20b`. Puedes cambiarlo mediante `GROQ_MODEL` si tu cuenta tiene acceso a otro modelo compatible.
