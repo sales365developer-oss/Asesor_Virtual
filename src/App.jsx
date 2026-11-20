@@ -240,7 +240,14 @@ export default function App() {
                 </div>
               </div>
             ))}
-            {isLoading && (\n              <div className="message-row assistant">\n                <div className="message-bubble"><p>Jhoel está pensando...</p></div>\n              </div>\n            )}\n            <div ref={bottomRef}/>
+            {isLoading && (
+              <div className="message-row assistant">
+                <div className="message-bubble">
+                  <p>Jhoel está pensando...</p>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef}/>
           </div>
 
           <form className="composer" onSubmit={e => { e.preventDefault(); sendMessage(); }}>
